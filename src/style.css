@@ -1,0 +1,278 @@
+:root {
+  --lumina-brand: #db146b;
+  --lumina-brand-soft: rgba(219, 20, 107, 0.35);
+  --lumina-bg: #0e0e12;
+  --lumina-fg: #f5f3f4;
+  --lumina-fg-dim: #9d99a1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--lumina-bg);
+  color: var(--lumina-fg);
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  /* Block pull-to-refresh / overscroll bounce while navigating. */
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+}
+
+#viewer-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* White-label guard: nuke any DOM the SDK may inject with XGrids or   */
+/* LCC branding. Mirrors the inline-critical rules in index.html.      */
+/* ------------------------------------------------------------------ */
+[class*='xgrids' i],
+[id*='xgrids' i],
+[class*='lcc-logo' i],
+[id*='lcc-logo' i],
+[class*='lcc-loading' i],
+[id*='lcc-loading' i],
+[class*='lcc-splash' i],
+[id*='lcc-splash' i],
+img[src*='xgrids' i],
+.lumina-brand-suppressed {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Lumina Spatial loading screen                                       */
+/* ------------------------------------------------------------------ */
+#lumina-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: radial-gradient(
+    ellipse at 50% 40%,
+    #1a1018 0%,
+    var(--lumina-bg) 70%
+  );
+  transition: opacity 0.6s ease;
+}
+
+#lumina-loader.lumina-loader--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lumina-loader__wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.lumina-loader__title {
+  font-size: clamp(22px, 5vw, 34px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.lumina-loader__title em {
+  font-style: normal;
+  color: var(--lumina-brand);
+}
+
+.lumina-loader__subtitle {
+  font-size: clamp(11px, 2.6vw, 14px);
+  font-weight: 400;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--lumina-fg-dim);
+}
+
+.lumina-loader__ring {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid rgba(219, 20, 107, 0.18);
+  border-top-color: var(--lumina-brand);
+  animation: lumina-spin 1s linear infinite;
+}
+
+@keyframes lumina-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lumina-loader__bar {
+  width: min(320px, 70vw);
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.lumina-loader__bar-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--lumina-brand), #ff5fa2);
+  box-shadow: 0 0 12px var(--lumina-brand-soft);
+  transition: width 0.25s ease;
+}
+
+.lumina-loader__status {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lumina-fg-dim);
+  min-height: 1.2em;
+}
+
+.lumina-loader__status strong {
+  color: var(--lumina-brand);
+  font-weight: 600;
+}
+
+.lumina-loader--error .lumina-loader__ring {
+  display: none;
+}
+
+.lumina-loader--error .lumina-loader__status {
+  color: var(--lumina-fg);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 14px;
+  max-width: min(440px, 84vw);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ */
+/* HUD chrome                                                          */
+/* ------------------------------------------------------------------ */
+#lumina-hud {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  left: 16px;
+  z-index: 500;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#lumina-hud .lumina-hud__mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--lumina-brand);
+  box-shadow: 0 0 10px var(--lumina-brand-soft);
+}
+
+#lumina-hud .lumina-hud__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(245, 243, 244, 0.82);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+
+/* ------------------------------------------------------------------ */
+/* nipplejs joystick zones (mobile only)                               */
+/* ------------------------------------------------------------------ */
+.lumina-stick-zone {
+  position: fixed;
+  bottom: 0;
+  z-index: 600;
+  width: 44vw;
+  max-width: 260px;
+  height: 38vh;
+  max-height: 300px;
+  display: none;
+  touch-action: none;
+}
+
+.lumina-stick-zone--move {
+  left: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.lumina-stick-zone--look {
+  right: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+body.lumina-touch .lumina-stick-zone {
+  display: block;
+}
+
+/* nipplejs renders inline-styled circles; tint them with brand color. */
+.lumina-stick-zone .front {
+  background: var(--lumina-brand) !important;
+  box-shadow: 0 0 18px var(--lumina-brand-soft);
+}
+
+.lumina-stick-zone .back {
+  background: rgba(219, 20, 107, 0.16) !important;
+  border: 1.5px solid rgba(219, 20, 107, 0.55);
+}
+
+/* Desktop helper hint */
+#lumina-hint {
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(14, 14, 18, 0.72);
+  border: 1px solid rgba(219, 20, 107, 0.4);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--lumina-fg-dim);
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+  white-space: nowrap;
+}
+
+#lumina-hint.lumina-hint--hidden {
+  opacity: 0;
+}
+
+body.lumina-touch #lumina-hint {
+  display: none;
+}

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Recurse \"$env:TEMP\\\\lcc-web-sdk-060\\\\sdk\" | Select-Object FullName, Length | Format-Table -AutoSize | Out-String -Width 250; Write-Output \"===EXAMPLES===\"; Get-ChildItem \"$env:TEMP\\\\lcc-web-sdk-060\\\\examples\" | Select-Object Name; Write-Output \"===README===\"; Get-Content \"$env:TEMP\\\\lcc-web-sdk-060\\\\README.md\" -Raw)",
+      "Read(//c/Users/paul/AppData/Local/Temp/lcc-web-sdk-060/examples/**)",
+      "PowerShell($f = \"$env:TEMP\\\\lcc-web-sdk-060\\\\sdk\\\\lcc-0.6.0.js\"; $c = Get-Content $f -Raw; Write-Output \"=== xgrids/logo/brand ===\"; [regex]::Matches\\($c, \"\\(?i\\).{60}\\(xgrids|logo|splash|watermark|poweredby|powered by\\).{60}\"\\) | Select-Object -First 15 | ForEach-Object { $_.Value }; Write-Output \"=== createElement / DOM injection ===\"; [regex]::Matches\\($c, \"createElement\\\\\\(.{1,30}\\\\\\)\"\\) | Group-Object Value | Select-Object Count, Name | Format-Table -AutoSize)",
+      "PowerShell($f = \"$env:TEMP\\\\lcc-web-sdk-060\\\\sdk\\\\lcc-0.6.0.js\"; $c = Get-Content $f -Raw; Write-Output \"=== class Ls \\(watermark\\) ===\"; $i = $c.IndexOf\\(\"class Ls\"\\); if \\($i -ge 0\\) { $c.Substring\\($i, 3000\\) })",
+      "PowerShell(npm create vite@latest . -- --template vanilla-ts)"
+    ]
+  }
+}
