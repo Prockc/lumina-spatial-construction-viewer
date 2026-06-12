@@ -231,13 +231,18 @@ export class MeasureTool {
   }
 }
 
+/** LCC captures are metric (meters); labels display Imperial units. */
+const INCHES_PER_METER = 39.3701;
+const SQ_INCHES_PER_SQ_METER = INCHES_PER_METER * INCHES_PER_METER;
+
 function formatLength(meters: number): string {
-  if (meters < 1) return `${(meters * 100).toFixed(1)} cm`;
-  return `${meters.toFixed(2)} m`;
+  const inches = meters * INCHES_PER_METER;
+  return `${inches.toFixed(1)} in`;
 }
 
 function formatArea(squareMeters: number): string {
-  return `${squareMeters.toFixed(2)} m²`;
+  const squareInches = squareMeters * SQ_INCHES_PER_SQ_METER;
+  return `${squareInches.toFixed(0)} in²`;
 }
 
 /**

@@ -19,10 +19,7 @@ Amplify.configure({});
 function buildHud(): void {
   const hud = document.createElement('div');
   hud.id = 'lumina-hud';
-  hud.innerHTML = `
-    <span class="lumina-hud__mark"></span>
-    <span class="lumina-hud__label">Lumina Spatial</span>
-  `;
+  hud.innerHTML = `<img class="lumina-hud__logo" src="/logo.png" alt="Lumina Spatial" />`;
   document.body.appendChild(hud);
 
   const hint = document.createElement('div');
@@ -68,15 +65,19 @@ function main(): void {
   });
   viewer.addFrameListener(() => measureTool.update());
 
+  // Mobile: single left movement stick; look = touch-drag on the canvas.
+  const joystick = installJoysticks(viewer.controls);
+
   const toolbar = installToolbar({
-    onCameraMode: (mode) => viewer.setCameraMode(mode),
+    onCameraMode: (mode) => {
+      viewer.setCameraMode(mode);
+      // The movement stick is a first-person control only.
+      joystick.setVisible(mode === 'first-person');
+    },
     onMeasureMode: (mode) => measureTool.setMode(mode),
     onClearMeasurements: () => measureTool.clear(),
   });
   measureTool.onChange = (count) => toolbar.setHasMeasurements(count > 0);
-
-  // Mobile: single left movement stick; look = touch-drag on the canvas.
-  installJoysticks(viewer.controls);
 
   const hint = document.getElementById('lumina-hint');
   viewer.controls.setFirstInteractionCallback(() => {

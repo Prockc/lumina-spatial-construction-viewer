@@ -33,6 +33,11 @@ const COLLISION_BUFFER = 0.35;
 const PICK_MAX_DISTANCE = 1000;
 const PICK_RADIUS = 0.1;
 
+/** Double-tap detection: max gap between taps and max finger travel. */
+const DOUBLE_TAP_MS = 400;
+const DOUBLE_TAP_DIST_PX = 28;
+const TAP_SLOP_PX = 8;
+
 /**
  * Core Three.js viewer: scene, camera, renderer, render loop, and the
  * LCC-Web-SDK streaming loader — tuned for mobile GPUs.
@@ -49,6 +54,9 @@ export class Viewer {
   private readonly clock = new Clock();
   private model: LCCObject | null = null;
   private readonly frameListeners: Array<() => void> = [];
+
+  private tapStart: { x: number; y: number } | null = null;
+  private lastTap: { x: number; y: number; t: number } | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({
@@ -84,6 +92,10 @@ export class Viewer {
     this.orbit.enableDamping = true;
     this.orbit.dampingFactor = 0.08;
     this.orbit.enabled = false;
+
+    // Double-click / double-tap in pivot mode re-centers the focal point.
+    canvas.addEventListener('pointerdown', this.handleTapDown);
+    canvas.addEventListener('pointerup', this.handleTapUp);
 
     window.addEventListener('resize', this.handleResize);
   }
@@ -202,6 +214,11 @@ export class Viewer {
   dispose(): void {
     this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.handleResize);
+    this.renderer.domElement.removeEventListener(
+      'pointerdown',
+      this.handleTapDown,
+    );
+    this.renderer.domElement.removeEventListener('pointerup', this.handleTapUp);
     this.controls.dispose();
     this.orbit.dispose();
     this.model?.dispose?.();
@@ -237,6 +254,47 @@ export class Viewer {
     const allowed = Math.max(0, hitDistance - COLLISION_BUFFER);
     if (allowed >= distance) return to;
     return from.clone().addScaledVector(direction, allowed);
+  };
+
+  /**
+   * Manual double-tap detection on pointer events (works for both mouse
+   * double-click and touch double-tap, which `dblclick` does not reliably
+   * deliver under `touch-action: none`). In pivot mode, a double-tap on
+   * the model re-targets OrbitControls to the tapped surface point.
+   */
+  private readonly handleTapDown = (e: PointerEvent): void => {
+    if (!e.isPrimary) return;
+    this.tapStart = { x: e.clientX, y: e.clientY };
+  };
+
+  private readonly handleTapUp = (e: PointerEvent): void => {
+    if (!e.isPrimary || !this.tapStart) return;
+    const start = this.tapStart;
+    this.tapStart = null;
+
+    // A drag is navigation, not a tap.
+    const moved = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+    if (moved > TAP_SLOP_PX) {
+      this.lastTap = null;
+      return;
+    }
+
+    const now = performance.now();
+    const prev = this.lastTap;
+    this.lastTap = { x: e.clientX, y: e.clientY, t: now };
+
+    const isDouble =
+      prev !== null &&
+      now - prev.t < DOUBLE_TAP_MS &&
+      Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < DOUBLE_TAP_DIST_PX;
+    if (!isDouble || this.mode !== 'pivot') return;
+    this.lastTap = null;
+
+    const point = this.pickPoint(e.clientX, e.clientY);
+    if (point) {
+      this.orbit.target.copy(point);
+      this.orbit.update();
+    }
   };
 
   private pickScreenCenter(): Vector3 | null {

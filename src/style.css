@@ -192,21 +192,11 @@ img[src*='xgrids' i],
   gap: 10px;
 }
 
-#lumina-hud .lumina-hud__mark {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  background: var(--lumina-brand);
-  box-shadow: 0 0 10px var(--lumina-brand-soft);
-}
-
-#lumina-hud .lumina-hud__label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(245, 243, 244, 0.82);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+#lumina-hud .lumina-hud__logo {
+  display: block;
+  max-height: 40px;
+  width: auto;
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.6));
 }
 
 /* ------------------------------------------------------------------ */
@@ -231,6 +221,11 @@ img[src*='xgrids' i],
 
 body.lumina-touch .lumina-stick-zone {
   display: block;
+}
+
+/* Pivot mode hides the movement stick (first-person only control). */
+.lumina-stick-zone.lumina-stick-zone--hidden {
+  display: none !important;
 }
 
 /* nipplejs renders inline-styled circles; tint them with brand color. */

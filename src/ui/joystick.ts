@@ -11,8 +11,17 @@ import type { FirstPersonController } from '../viewer/FirstPersonController';
  * screen uncluttered. The stick is tinted with the Lumina brand color
  * (#DB146B) via CSS and only appears on touch devices (body.lumina-touch).
  */
-export function installJoysticks(controller: FirstPersonController): void {
-  if (!isTouchDevice()) return;
+export interface JoystickHandle {
+  /** Show/hide the movement stick (hidden while pivot mode is active). */
+  setVisible: (visible: boolean) => void;
+}
+
+export function installJoysticks(
+  controller: FirstPersonController,
+): JoystickHandle {
+  if (!isTouchDevice()) {
+    return { setVisible: () => {} };
+  }
   document.body.classList.add('lumina-touch');
 
   const moveZone = createZone('lumina-stick-zone--move');
@@ -28,6 +37,13 @@ export function installJoysticks(controller: FirstPersonController): void {
   });
 
   wireStick(moveStick, (x, y) => controller.setMoveInput(x, y));
+
+  return {
+    setVisible(visible: boolean): void {
+      moveZone.classList.toggle('lumina-stick-zone--hidden', !visible);
+      if (!visible) controller.setMoveInput(0, 0);
+    },
+  };
 }
 
 function wireStick(
