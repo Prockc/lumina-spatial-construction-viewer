@@ -3,6 +3,8 @@ import { Amplify } from 'aws-amplify';
 import { installBrandGuard } from './ui/brandGuard';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { installJoysticks } from './ui/joystick';
+import { installToolbar } from './ui/toolbar';
+import { MeasureTool } from './tools/MeasureTool';
 import { Viewer } from './viewer/Viewer';
 import { resolveModelUrl } from './config';
 
@@ -57,6 +59,23 @@ function main(): void {
     },
   });
 
+  // Measurement (distance / area) on top of the SDK raycast interface.
+  const measureTool = new MeasureTool({
+    scene: viewer.scene,
+    camera: viewer.camera,
+    canvas,
+    pick: viewer.pickPoint,
+  });
+  viewer.addFrameListener(() => measureTool.update());
+
+  const toolbar = installToolbar({
+    onCameraMode: (mode) => viewer.setCameraMode(mode),
+    onMeasureMode: (mode) => measureTool.setMode(mode),
+    onClearMeasurements: () => measureTool.clear(),
+  });
+  measureTool.onChange = (count) => toolbar.setHasMeasurements(count > 0);
+
+  // Mobile: single left movement stick; look = touch-drag on the canvas.
   installJoysticks(viewer.controls);
 
   const hint = document.getElementById('lumina-hint');

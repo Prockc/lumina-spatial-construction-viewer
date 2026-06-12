@@ -229,11 +229,6 @@ img[src*='xgrids' i],
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.lumina-stick-zone--look {
-  right: 0;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
 body.lumina-touch .lumina-stick-zone {
   display: block;
 }
@@ -275,4 +270,129 @@ body.lumina-touch .lumina-stick-zone {
 
 body.lumina-touch #lumina-hint {
   display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tool overlay (right edge)                                           */
+/* ------------------------------------------------------------------ */
+#lumina-toolbar {
+  position: fixed;
+  right: calc(10px + env(safe-area-inset-right));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lumina-toolbar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(14, 14, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.lumina-toolbar__btn {
+  width: 42px;
+  height: 42px;
+  padding: 9px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(245, 243, 244, 0.85);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+  touch-action: manipulation;
+}
+
+.lumina-toolbar__btn svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.lumina-toolbar__btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lumina-toolbar__btn:active {
+  transform: scale(0.92);
+}
+
+.lumina-toolbar__btn.active {
+  background: var(--lumina-brand);
+  color: #fff;
+  box-shadow: 0 0 14px var(--lumina-brand-soft);
+}
+
+.lumina-toolbar__btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Measurement labels + toast                                          */
+/* ------------------------------------------------------------------ */
+#lumina-measure-labels {
+  position: fixed;
+  inset: 0;
+  z-index: 650;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.lumina-measure-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(14, 14, 18, 0.82);
+  border: 1px solid var(--lumina-brand);
+  color: var(--lumina-fg);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.lumina-measure-label--total {
+  background: var(--lumina-brand);
+  border-color: var(--lumina-brand);
+  color: #fff;
+  box-shadow: 0 0 12px var(--lumina-brand-soft);
+}
+
+#lumina-toast {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(14, 14, 18, 0.85);
+  border: 1px solid rgba(219, 20, 107, 0.5);
+  backdrop-filter: blur(8px);
+  color: var(--lumina-fg);
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+#lumina-toast.lumina-toast--hidden {
+  opacity: 0;
 }

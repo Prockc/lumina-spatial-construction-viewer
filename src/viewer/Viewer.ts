@@ -7,15 +7,31 @@ import {
   WebGLRenderer,
 } from 'three';
 import * as THREE from 'three';
-import { LCCRender, type LCCObject } from '../vendor/lcc/lcc-0.6.0.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import {
+  LCCRender,
+  type LCCObject,
+  type LCCPoint,
+} from '../vendor/lcc/lcc-0.6.0.js';
 import { XGRIDS_APP_KEY } from '../config';
 import { FirstPersonController } from './FirstPersonController';
 
 export interface ViewerEvents {
   onProgress: (percent: number) => void;
-  onLoaded: (model: LCCObject) => void;
+  onLoaded: () => void;
   onError: (error?: unknown) => void;
 }
+
+/**
+ * The only two navigation modes that exist in this build. There is
+ * deliberately no avatar / third-person mode.
+ */
+export type CameraMode = 'first-person' | 'pivot';
+
+/** Keep-out distance between the camera and collision geometry (meters). */
+const COLLISION_BUFFER = 0.35;
+const PICK_MAX_DISTANCE = 1000;
+const PICK_RADIUS = 0.1;
 
 /**
  * Core Three.js viewer: scene, camera, renderer, render loop, and the
@@ -27,8 +43,12 @@ export class Viewer {
   readonly renderer: WebGLRenderer;
   readonly controls: FirstPersonController;
 
+  private readonly orbit: OrbitControls;
+  private mode: CameraMode = 'first-person';
+
   private readonly clock = new Clock();
   private model: LCCObject | null = null;
+  private readonly frameListeners: Array<() => void> = [];
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({
@@ -57,6 +77,13 @@ export class Viewer {
     this.camera.lookAt(new Vector3(0, 1.7, -1));
 
     this.controls = new FirstPersonController(this.camera, canvas);
+    this.controls.collisionGuard = this.collisionGuard;
+
+    // Pivot (orbit) mode — created up front, enabled on demand.
+    this.orbit = new OrbitControls(this.camera, canvas);
+    this.orbit.enableDamping = true;
+    this.orbit.dampingFactor = 0.08;
+    this.orbit.enabled = false;
 
     window.addEventListener('resize', this.handleResize);
   }
@@ -82,23 +109,92 @@ export class Viewer {
         renderer: this.renderer,
         useEnv: true,
         useIndexDB: true,
+        // Stream the capture's collision mesh so camera collision and
+        // precise measurement picking are available.
+        useCollision: true,
         // The SDK's own loading effect stays off — the Lumina-branded
         // loading screen owns all loading UI (white-label requirement).
         useLoadingEffect: false,
         modelMatrix,
         appKey: XGRIDS_APP_KEY,
       },
-      (mesh) => events.onLoaded(mesh),
+      () => events.onLoaded(),
       (percent) => events.onProgress(percent),
       (error) => events.onError(error),
     );
   }
 
+  getCameraMode(): CameraMode {
+    return this.mode;
+  }
+
+  /**
+   * Switch between first-person and pivot navigation.
+   * (Avatar / third-person mode is intentionally not implemented.)
+   */
+  setCameraMode(mode: CameraMode): void {
+    if (mode === this.mode) return;
+    this.mode = mode;
+
+    if (mode === 'pivot') {
+      this.controls.enabled = false;
+      // Pivot around what the user is looking at; fall back to a point
+      // 5 m ahead while the capture is still streaming.
+      const target = this.pickScreenCenter() ?? this.forwardPoint(5);
+      this.orbit.target.copy(target);
+      this.orbit.enabled = true;
+      this.orbit.update();
+    } else {
+      this.orbit.enabled = false;
+      this.controls.enabled = true;
+      this.controls.syncFromCamera();
+    }
+  }
+
+  /**
+   * Resolve a screen tap/click to a 3D point on the model. Prefers the
+   * collision mesh (precise surfaces) and falls back to splat picking.
+   */
+  pickPoint = (clientX: number, clientY: number): Vector3 | null => {
+    const evt = { x: clientX, y: clientY };
+
+    if (this.model?.hasCollision?.() && this.model.intersectsRay) {
+      const hit = this.model.intersectsRay({
+        evt,
+        maxDistance: PICK_MAX_DISTANCE,
+      });
+      if (hit) return toVector3(hit);
+    }
+
+    const hit =
+      this.model?.raycast?.({
+        evt,
+        maxDistance: PICK_MAX_DISTANCE,
+        radius: PICK_RADIUS,
+      }) ??
+      LCCRender.raycast({
+        evt,
+        maxDistance: PICK_MAX_DISTANCE,
+        radius: PICK_RADIUS,
+      });
+    return hit ? toVector3(hit) : null;
+  };
+
+  /** Run a callback every frame (measurement label tracking, etc.). */
+  addFrameListener(listener: () => void): void {
+    this.frameListeners.push(listener);
+  }
+
   start(): void {
     this.renderer.setAnimationLoop(() => {
       const dt = this.clock.getDelta();
-      this.controls.update(dt);
+      if (this.mode === 'first-person') {
+        this.controls.update(dt);
+      } else {
+        this.orbit.update();
+      }
       LCCRender.update();
+      for (const listener of this.frameListeners) listener();
       this.renderer.render(this.scene, this.camera);
     });
   }
@@ -107,8 +203,54 @@ export class Viewer {
     this.renderer.setAnimationLoop(null);
     window.removeEventListener('resize', this.handleResize);
     this.controls.dispose();
+    this.orbit.dispose();
     this.model?.dispose?.();
     this.renderer.dispose();
+  }
+
+  // ----------------------------------------------------------------- //
+
+  /**
+   * Collision clamp for first-person motion: cast the SDK collision-mesh
+   * ray along the intended displacement and stop short of any surface,
+   * so the camera cannot pass through walls or floors. No-op until the
+   * capture's collision payload has streamed in.
+   */
+  private readonly collisionGuard = (from: Vector3, to: Vector3): Vector3 => {
+    if (!this.model?.hasCollision?.() || !this.model.intersectsRayFromOrigin) {
+      return to;
+    }
+
+    const direction = to.clone().sub(from);
+    const distance = direction.length();
+    if (distance < 1e-6) return to;
+    direction.divideScalar(distance);
+
+    const hit = this.model.intersectsRayFromOrigin({
+      origin: { x: from.x, y: from.y, z: from.z },
+      direction: { x: direction.x, y: direction.y, z: direction.z },
+      maxDistance: distance + COLLISION_BUFFER,
+    });
+    if (!hit) return to;
+
+    const hitDistance = from.distanceTo(toVector3(hit));
+    const allowed = Math.max(0, hitDistance - COLLISION_BUFFER);
+    if (allowed >= distance) return to;
+    return from.clone().addScaledVector(direction, allowed);
+  };
+
+  private pickScreenCenter(): Vector3 | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    return this.pickPoint(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
+  }
+
+  private forwardPoint(meters: number): Vector3 {
+    const dir = new Vector3();
+    this.camera.getWorldDirection(dir);
+    return this.camera.position.clone().addScaledVector(dir, meters);
   }
 
   private readonly handleResize = (): void => {
@@ -116,4 +258,8 @@ export class Viewer {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   };
+}
+
+function toVector3(p: LCCPoint): Vector3 {
+  return new Vector3(p.x, p.y, p.z);
 }

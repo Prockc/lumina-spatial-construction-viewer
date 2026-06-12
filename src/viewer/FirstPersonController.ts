@@ -25,6 +25,17 @@ export class FirstPersonController {
   /** Radians per CSS pixel of pointer drag. */
   dragSensitivity = 0.0035;
 
+  /** When false (e.g. pivot mode is active) all input and motion stop. */
+  enabled = true;
+
+  /**
+   * Optional collision clamp: receives the current and proposed camera
+   * positions and returns the permitted one (Viewer wires this to the
+   * SDK's collision-mesh ray query so the camera can't pass through
+   * walls or floors).
+   */
+  collisionGuard: ((from: Vector3, to: Vector3) => Vector3) | null = null;
+
   private readonly camera: PerspectiveCamera;
   private readonly domElement: HTMLElement;
   private readonly euler = new Euler(0, 0, 0, 'YXZ');
@@ -35,6 +46,7 @@ export class FirstPersonController {
 
   private readonly velocity = new Vector3();
   private readonly targetVelocity = new Vector3();
+  private readonly proposed = new Vector3();
   private readonly forward = new Vector3();
   private readonly right = new Vector3();
 
@@ -77,8 +89,16 @@ export class FirstPersonController {
     this.euler.setFromQuaternion(this.camera.quaternion);
   }
 
+  /** Re-adopt the camera's current orientation (after pivot mode moved it). */
+  syncFromCamera(): void {
+    this.euler.setFromQuaternion(this.camera.quaternion);
+    this.velocity.set(0, 0, 0);
+    this.moveInput = { x: 0, y: 0 };
+    this.lookInput = { x: 0, y: 0 };
+  }
+
   update(dt: number): void {
-    if (this.disposed) return;
+    if (this.disposed || !this.enabled) return;
     const step = Math.min(dt, 0.1);
 
     // --- Rotation (joystick axes are rate-based) ---
@@ -120,7 +140,13 @@ export class FirstPersonController {
     this.velocity.lerp(this.targetVelocity, smoothing);
 
     if (this.velocity.lengthSq() > 1e-8) {
-      this.camera.position.addScaledVector(this.velocity, step);
+      this.proposed
+        .copy(this.camera.position)
+        .addScaledVector(this.velocity, step);
+      const allowed = this.collisionGuard
+        ? this.collisionGuard(this.camera.position, this.proposed)
+        : this.proposed;
+      this.camera.position.copy(allowed);
     }
   }
 
@@ -154,14 +180,14 @@ export class FirstPersonController {
   }
 
   private readonly handlePointerDown = (e: PointerEvent): void => {
-    if (!e.isPrimary) return;
+    if (!e.isPrimary || !this.enabled) return;
     this.dragging = true;
     this.lastPointer = { x: e.clientX, y: e.clientY };
     this.domElement.setPointerCapture?.(e.pointerId);
   };
 
   private readonly handlePointerMove = (e: PointerEvent): void => {
-    if (!this.dragging || !e.isPrimary) return;
+    if (!this.dragging || !e.isPrimary || !this.enabled) return;
     const dx = e.clientX - this.lastPointer.x;
     const dy = e.clientY - this.lastPointer.y;
     this.lastPointer = { x: e.clientX, y: e.clientY };

@@ -2,19 +2,20 @@ import nipplejs, { type JoystickManager } from 'nipplejs';
 import type { FirstPersonController } from '../viewer/FirstPersonController';
 
 /**
- * Dual on-screen joysticks (SuperSplat-style mobile navigation):
- *  - left stick  -> first-person translation (forward / backward / strafe)
- *  - right stick -> first-person rotation (yaw / pitch)
+ * Single on-screen movement joystick for mobile:
+ *  - left stick -> first-person translation (forward / backward / strafe)
+ *  - looking around is native touch-drag anywhere else on the canvas
+ *    (handled by FirstPersonController's pointer events)
  *
- * Both are tinted with the Lumina brand color (#DB146B) via CSS in
- * style.css. Zones are only displayed on touch devices (body.lumina-touch).
+ * The previous right-hand look stick was removed deliberately to keep the
+ * screen uncluttered. The stick is tinted with the Lumina brand color
+ * (#DB146B) via CSS and only appears on touch devices (body.lumina-touch).
  */
 export function installJoysticks(controller: FirstPersonController): void {
   if (!isTouchDevice()) return;
   document.body.classList.add('lumina-touch');
 
   const moveZone = createZone('lumina-stick-zone--move');
-  const lookZone = createZone('lumina-stick-zone--look');
 
   const moveStick = nipplejs.create({
     zone: moveZone,
@@ -26,18 +27,7 @@ export function installJoysticks(controller: FirstPersonController): void {
     fadeTime: 150,
   });
 
-  const lookStick = nipplejs.create({
-    zone: lookZone,
-    mode: 'static',
-    position: { right: '50%', bottom: '90px' },
-    size: 110,
-    threshold: 0.05,
-    restOpacity: 0.55,
-    fadeTime: 150,
-  });
-
   wireStick(moveStick, (x, y) => controller.setMoveInput(x, y));
-  wireStick(lookStick, (x, y) => controller.setLookInput(x, y));
 }
 
 function wireStick(

@@ -80,16 +80,25 @@ never 404. Query strings pass through Amplify rewrites untouched.
   inside WebGL, not the DOM. Supplying a valid `VITE_XGRIDS_APP_KEY` removes
   it legitimately — this is the supported white-label path.
 
-## Navigation
+## Navigation & tools
 
-Strictly first-person; no orbit/third-person mode exists in the build.
+Two camera modes — **first-person** and **pivot** (orbit). There is
+deliberately no avatar / third-person mode in the build.
 
 - **Desktop:** drag to look, `WASD`/arrows to move, `Q`/`E` down/up,
   `Shift` to sprint.
-- **Mobile:** dual brand-tinted joysticks (nipplejs) — left stick =
-  forward/backward/strafe, right stick = look (yaw/pitch). Touch input on
-  the sticks and canvas is fully isolated from browser scrolling and
-  pull-to-refresh.
+- **Mobile:** a single brand-tinted movement joystick (nipplejs, bottom
+  left) for forward/backward/strafe; look around by touch-dragging
+  anywhere on the canvas. Touch input is fully isolated from browser
+  scrolling and pull-to-refresh.
+- **Collision:** the capture's collision mesh streams in (`useCollision`)
+  and first-person movement is clamped against it, so the camera cannot
+  pass through walls or floors.
+- **Measurement:** the right-edge toolbar toggles distance (polyline,
+  segment + total lengths) and area (polygon, m²) measurement. Points are
+  picked via the SDK's collision-mesh/splat raycast; gizmos and labels
+  render in the brand color. The SDK itself ships no measurement UI —
+  this is built on its raycast primitives.
 
 ## Project layout
 
