@@ -7,6 +7,7 @@ frontend:
         - npm ci
     build:
       commands:
+        - echo "VITE_S3_BUCKET_URL=https://s3.us-east-1.amazonaws.com/tours.luminaspatial.net" >> .env
         - npm run build
   artifacts:
     baseDirectory: dist
