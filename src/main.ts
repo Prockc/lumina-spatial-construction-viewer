@@ -4,6 +4,7 @@ import { installBrandGuard } from './ui/brandGuard';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { installJoysticks } from './ui/joystick';
 import { installToolbar } from './ui/toolbar';
+import { installQualityToggle } from './ui/qualityToggle';
 import { MeasureTool } from './tools/MeasureTool';
 import { Viewer } from './viewer/Viewer';
 import { resolveModelUrl } from './config';
@@ -64,6 +65,10 @@ function main(): void {
     pick: viewer.pickPoint,
   });
   viewer.addFrameListener(() => measureTool.update());
+
+  // HD quality toggle (bottom-right). Defaults ON; flips the viewer between
+  // full desktop fidelity and the SDK's native mobile profile on the fly.
+  installQualityToggle((hd) => viewer.setHighQuality(hd), viewer.getHighQuality());
 
   // Mobile: single left movement stick; look = touch-drag on the canvas.
   const joystick = installJoysticks(viewer.controls);

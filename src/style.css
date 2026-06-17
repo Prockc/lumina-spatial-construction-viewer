@@ -365,6 +365,55 @@ body.lumina-touch #lumina-hint {
 }
 
 /* ------------------------------------------------------------------ */
+/* Bottom-right control dock + HD quality toggle                       */
+/* ------------------------------------------------------------------ */
+#lumina-bottom-controls {
+  position: fixed;
+  right: calc(12px + env(safe-area-inset-right));
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lumina-pill-btn {
+  min-width: 52px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  /* Off state: neutral semi-transparent white dark-glass. */
+  color: rgba(245, 243, 244, 0.65);
+  background: rgba(14, 14, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  touch-action: manipulation;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.1s ease;
+}
+
+.lumina-pill-btn:active {
+  transform: scale(0.94);
+}
+
+/* On state: glow in the Lumina brand color. */
+.lumina-pill-btn--on {
+  color: var(--lumina-brand);
+  border-color: var(--lumina-brand);
+  box-shadow:
+    0 0 14px var(--lumina-brand-soft),
+    inset 0 0 10px rgba(219, 20, 107, 0.18);
+}
+
+/* ------------------------------------------------------------------ */
 /* Measurement labels + toast                                          */
 /* ------------------------------------------------------------------ */
 #lumina-measure-labels {

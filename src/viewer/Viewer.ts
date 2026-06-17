@@ -29,14 +29,45 @@ export interface ViewerEvents {
 export type CameraMode = 'first-person' | 'pivot';
 
 /**
- * Splat budget override. The LCC SDK auto-detects the device and, on phones
- * (and weaker GPUs), throttles the loaded splat count hard — as low as 1M,
- * versus a 3M desktop default — which is what makes captures look noticeably
- * worse on mobile. We lift the ceiling so the full capture streams in on every
- * device; real construction captures sit well under this, so in practice it
- * means "load everything, no mobile downgrade."
+ * Quality profiles for the HD toggle.
+ *
+ * The LCC SDK auto-detects the device and, on phones / weaker GPUs, throttles
+ * three things that make captures look noticeably worse than desktop:
+ *   - total splat budget (`maxLoadSplatCount`): as low as 1M vs. 3M desktop,
+ *   - per-LOD-node splat budget (`LodLevelUpSpatsInNode` via setMaxNodeSplats):
+ *     dropped to ~0.5M on mobile,
+ *   - and we additionally cap the WebGL backbuffer via the Three.js pixel
+ *     ratio.
+ *
+ * `hd` forces full desktop thresholds regardless of device (real captures sit
+ * well under the splat ceilings, so in practice it means "load everything").
+ * `performance` mirrors the SDK's native mobile tuning for older phones that
+ * can't sustain full fidelity. Both apply live — no reload — because every
+ * underlying setter flags the SDK config dirty and re-evaluates immediately.
  */
-const MAX_LOAD_SPLAT_COUNT = 16_000_000;
+interface QualityProfile {
+  /** Three.js renderer pixel ratio = WebGL backbuffer scale. */
+  pixelRatio: number;
+  maxLoadSplatCount: number;
+  maxNodeSplats: number;
+  lodAutoLevelUp: boolean;
+}
+
+const QUALITY_PROFILES: Record<'hd' | 'performance', QualityProfile> = {
+  hd: {
+    pixelRatio: window.devicePixelRatio,
+    maxLoadSplatCount: 16_000_000,
+    maxNodeSplats: 2_000_000,
+    lodAutoLevelUp: true,
+  },
+  performance: {
+    // Lower backbuffer scale is the biggest perf lever on dense phone screens.
+    pixelRatio: Math.min(window.devicePixelRatio, 1.5),
+    maxLoadSplatCount: 1_000_000,
+    maxNodeSplats: 500_000,
+    lodAutoLevelUp: false,
+  },
+};
 
 /** Keep-out distance between the camera and collision geometry (meters). */
 const COLLISION_BUFFER = 0.35;
@@ -68,6 +99,9 @@ export class Viewer {
   private tapStart: { x: number; y: number } | null = null;
   private lastTap: { x: number; y: number; t: number } | null = null;
 
+  /** HD toggle state. Defaults ON so the viewer opens at full fidelity. */
+  private highQuality = true;
+
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({
       canvas,
@@ -79,10 +113,12 @@ export class Viewer {
       alpha: false,
       stencil: false,
     });
-    // Render at the device's native resolution. The previous 2x DPR cap
-    // visibly softened the model on high-density phone screens; honoring the
-    // full devicePixelRatio is the single biggest mobile fidelity win.
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    // Start at the HD profile's pixel ratio (native resolution). The previous
+    // 2x DPR cap visibly softened the model on high-density phone screens;
+    // honoring full devicePixelRatio is the single biggest mobile fidelity win.
+    // The remaining SDK splat/LOD knobs are applied once the model is live
+    // (see applyQuality), since they live on the renderer handle.
+    this.renderer.setPixelRatio(QUALITY_PROFILES.hd.pixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setClearColor(0x0e0e12);
 
@@ -140,22 +176,15 @@ export class Viewer {
         useLoadingEffect: false,
         modelMatrix,
         appKey: XGRIDS_APP_KEY,
-        // Override the SDK's per-device splat throttle (see constant above).
-        maxLoadSplatCount: MAX_LOAD_SPLAT_COUNT,
+        // Override the SDK's per-device splat throttle from the first byte.
+        maxLoadSplatCount: QUALITY_PROFILES.hd.maxLoadSplatCount,
       },
       () => {
         // The SDK applies its mobile downgrade during device detection, which
-        // can clobber the load-time ceiling. Re-assert it (and enable LOD
-        // auto-optimization) once the renderer is live so mobile renders at
-        // full fidelity. Both are defensive: older SDK builds may omit them.
-        if (this.model) {
-          try {
-            this.model.maxLoadSplatCount = MAX_LOAD_SPLAT_COUNT;
-          } catch {
-            /* read-only on this SDK build — load-time option still applies */
-          }
-          this.model.setLodAutoLevelUp?.(true);
-        }
+        // can clobber the load-time ceiling. Re-assert the active quality
+        // profile once the renderer handle is live (the splat/LOD setters only
+        // exist there) so mobile honors the current HD toggle state.
+        this.applyQuality();
         events.onLoaded();
       },
       (percent) => events.onProgress(percent),
@@ -165,6 +194,42 @@ export class Viewer {
 
   getCameraMode(): CameraMode {
     return this.mode;
+  }
+
+  getHighQuality(): boolean {
+    return this.highQuality;
+  }
+
+  /**
+   * Switch between the HD (full desktop fidelity) and performance (SDK native
+   * mobile) quality profiles on the fly — no reload. Safe to call before the
+   * model has loaded; the splat/LOD setters are simply skipped until then and
+   * re-applied from the load callback.
+   */
+  setHighQuality(enabled: boolean): void {
+    this.highQuality = enabled;
+    this.applyQuality();
+  }
+
+  private applyQuality(): void {
+    const profile = this.highQuality
+      ? QUALITY_PROFILES.hd
+      : QUALITY_PROFILES.performance;
+
+    // Resize the WebGL backbuffer to the profile's pixel ratio. setSize must
+    // follow setPixelRatio for the new ratio to take effect.
+    this.renderer.setPixelRatio(profile.pixelRatio);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+    if (!this.model) return;
+    try {
+      // Writable on this SDK build; older builds expose only the load option.
+      this.model.maxLoadSplatCount = profile.maxLoadSplatCount;
+    } catch {
+      /* read-only — the load-time ceiling stands */
+    }
+    this.model.setMaxNodeSplats?.(profile.maxNodeSplats);
+    this.model.setLodAutoLevelUp?.(profile.lodAutoLevelUp);
   }
 
   /**

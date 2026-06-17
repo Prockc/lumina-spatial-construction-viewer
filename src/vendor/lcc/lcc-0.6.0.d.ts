@@ -107,6 +107,11 @@ export interface LCCObject {
    * how we undo the SDK's automatic mobile/low-GPU downgrade after load.
    */
   maxLoadSplatCount?: number;
+  /**
+   * Per-LOD-node splat budget (`LodLevelUpSpatsInNode`). The SDK throttles this
+   * to ~0.5M on mobile; raising it restores desktop-level local detail.
+   */
+  setMaxNodeSplats?(count: number): void;
   /** Toggle the SDK's LOD auto-optimization (higher detail when stationary). */
   setLodAutoLevelUp?(enabled: boolean): void;
   dispose?(): void;
