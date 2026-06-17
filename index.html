@@ -17,45 +17,23 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Lumina Spatial .ios Viewer</title>
     <!--
-      HD device-profile override. The XGrids LCC SDK classifies the device from
-      navigator.userAgent; an Android/iOS UA forces coarse mobile LODs
-      (MaxLodDistance 200 -> 30) that make captures look blurry. To get desktop
-      fidelity we present a desktop UA *before the SDK loads*. This MUST be a
-      classic inline <head> script: it runs before the deferred module bundle
-      (so the SDK never sees the real UA) and lets us fall back from the
-      navigator instance to its prototype on browsers (e.g. iOS Safari) that
-      refuse to redefine the instance property. Mirrors src/quality.ts.
+      HD quality flag for the vendored XGrids LCC SDK. The SDK hard-throttles
+      quality on mobile (MaxLodDistance 200 -> 30 — the dominant blur cause —
+      plus reduced splat/node budgets), with no public override. We patched the
+      SDK (scripts/patch-lcc-sdk.mjs) to gate ONLY those quality fields on this
+      global. It MUST be set by a classic inline <head> script so it exists
+      before the deferred module bundle (and thus before the SDK reads it at
+      load). HD defaults ON. Keep the storage key in sync with src/quality.ts.
     -->
     <script>
       (function () {
+        var hd = true;
         try {
-          // HD defaults ON; only skip the override when explicitly disabled.
-          if (localStorage.getItem('lumina:hd-quality') === '0') return;
+          hd = localStorage.getItem('lumina:hd-quality') !== '0';
         } catch (e) {
-          /* storage blocked — proceed with the override */
+          /* storage blocked — fall back to HD on */
         }
-        var DESKTOP_UA =
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-        function spoof(target) {
-          try {
-            Object.defineProperty(target, 'userAgent', {
-              get: function () {
-                return DESKTOP_UA;
-              },
-              configurable: true,
-            });
-          } catch (e) {
-            /* property locked on this target; caller tries the next one */
-          }
-        }
-        spoof(navigator);
-        if (navigator.userAgent !== DESKTOP_UA) {
-          spoof(Object.getPrototypeOf(navigator));
-        }
-        if (navigator.userAgent !== DESKTOP_UA && window.Navigator) {
-          spoof(window.Navigator.prototype);
-        }
+        window.__LUMINA_HD__ = hd;
       })();
     </script>
     <style>

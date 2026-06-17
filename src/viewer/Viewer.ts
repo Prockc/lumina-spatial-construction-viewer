@@ -35,9 +35,9 @@ export type CameraMode = 'first-person' | 'pivot';
  * These cover the knobs reachable *after* load: the WebGL backbuffer scale
  * (pixel ratio) and the SDK's splat budgets. They are NOT the whole story —
  * the dominant mobile quality killer is the SDK's per-device LOD-distance cap
- * (MaxLodDistance 200 -> 30), which has no runtime setter and is decided from
- * the device profile at startup. That lever lives in ../quality.ts, applied
- * before load. These profiles complement it.
+ * (MaxLodDistance 200 -> 30), which has no runtime setter. That one is handled
+ * by the vendored-SDK patch (scripts/patch-lcc-sdk.mjs) gated on the
+ * window.__LUMINA_HD__ flag set in index.html. These profiles complement it.
  *
  * `lodAutoLevelUp` maps to the SDK's `useLodAutoOptimization`. Verified in the
  * bundle: when the scene is under the splat budget it *raises* LOD detail up to
@@ -230,11 +230,11 @@ export class Viewer {
   /**
    * Select the HD or performance profile. Applies the pixel-ratio and splat
    * budgets immediately (these are genuinely live), but note the SDK's
-   * LOD-distance profile is fixed at startup from the device probe — switching
-   * that requires a reload (see ../quality.ts and installQualityToggle). main
-   * calls this once with the persisted preference before load(); it is safe to
-   * call before the model exists (the splat/LOD setters are then re-applied
-   * from the load callback).
+   * LOD-distance profile is fixed at load from window.__LUMINA_HD__ — switching
+   * that requires a reload (handled by installBottomControls). main calls this
+   * once with the persisted preference before load(); it is safe to call before
+   * the model exists (the splat/LOD setters are then re-applied from the load
+   * callback).
    */
   setHighQuality(enabled: boolean): void {
     this.highQuality = enabled;

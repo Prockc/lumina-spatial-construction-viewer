@@ -1,12 +1,12 @@
 /**
  * HD quality preference (persisted).
  *
- * The actual quality lever — making the LCC SDK take its desktop path instead
- * of the blurry mobile profile (MaxLodDistance 200 vs 30, full splat budget) —
- * is a navigator.userAgent override that MUST run before the SDK module loads.
- * It therefore lives as an inline <head> script in index.html, not here; this
- * module only owns the persisted on/off preference that the inline script and
- * the HD toggle both read. Keep the storage key below in sync with index.html.
+ * The actual quality lever lives in the vendored SDK: scripts/patch-lcc-sdk.mjs
+ * gates the SDK's mobile throttle (MaxLodDistance 200 vs 30, splat/node budgets)
+ * on a `window.__LUMINA_HD__` global, which the inline <head> script in
+ * index.html sets from this same preference before the SDK loads. This module
+ * only owns the persisted on/off value read by that script and the HD toggle.
+ * Keep the storage key below in sync with index.html.
  */
 
 const STORAGE_KEY = 'lumina:hd-quality';

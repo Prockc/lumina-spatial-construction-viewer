@@ -5,6 +5,8 @@
   "description": "Lumina Spatial .ios Viewer - white-labeled 3D Gaussian Splatting (.lcc2) streaming viewer",
   "type": "module",
   "scripts": {
+    "patch:sdk": "node scripts/patch-lcc-sdk.mjs",
+    "prebuild": "node scripts/patch-lcc-sdk.mjs",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"

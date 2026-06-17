@@ -42,16 +42,23 @@ export function installBottomControls(opts: BottomControlsOptions): void {
   hdBtn.setAttribute('role', 'switch');
   hdBtn.setAttribute('aria-label', 'HD quality');
 
-  /** Reflect HD on/off via the CSS class AND explicit inline styles. */
+  /**
+   * Reflect HD on/off via the CSS class AND explicit inline styles. When ON the
+   * button fills solid brand pink with white text (set directly on style so it
+   * cannot be defeated by any cascade issue); when OFF it reverts to the
+   * neutral dark-glass look from the stylesheet.
+   */
   function paintHd(on: boolean): void {
     hdBtn.classList.toggle('lumina-pill-btn--on', on);
     hdBtn.setAttribute('aria-checked', String(on));
     hdBtn.title = on ? 'HD quality: on' : 'HD quality: off (performance)';
     if (on) {
-      hdBtn.style.color = BRAND_COLOR;
+      hdBtn.style.backgroundColor = BRAND_COLOR;
+      hdBtn.style.color = '#fff';
       hdBtn.style.borderColor = BRAND_COLOR;
       hdBtn.style.boxShadow = `0 0 14px ${BRAND_COLOR}59`;
     } else {
+      hdBtn.style.backgroundColor = '';
       hdBtn.style.color = '';
       hdBtn.style.borderColor = '';
       hdBtn.style.boxShadow = '';
