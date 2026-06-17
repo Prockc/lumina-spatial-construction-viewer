@@ -1,3 +1,6 @@
+// First import: applies the HD desktop-profile override before the LCC SDK
+// module is evaluated (see bootstrapQuality.ts / quality.ts).
+import './bootstrapQuality';
 import './style.css';
 import { Amplify } from 'aws-amplify';
 import { installBrandGuard } from './ui/brandGuard';
@@ -8,8 +11,10 @@ import { installQualityToggle } from './ui/qualityToggle';
 import { MeasureTool } from './tools/MeasureTool';
 import { Viewer } from './viewer/Viewer';
 import { resolveModelUrl } from './config';
+import { isHdPreferred } from './quality';
 
 // Brand guard first: nothing non-Lumina may ever paint.
+// (The HD device-profile override already ran via ./bootstrapQuality.)
 installBrandGuard();
 
 // Amplify is initialized up front so backend categories (Auth-gated model
@@ -42,6 +47,9 @@ function main(): void {
 
   const canvas = document.getElementById('viewer-canvas') as HTMLCanvasElement;
   const viewer = new Viewer(canvas);
+  // Match the renderer's pixel ratio / splat budgets to the persisted choice
+  // (the device-profile spoof above handles the SDK's LOD side at startup).
+  viewer.setHighQuality(isHdPreferred());
 
   viewer.load(url, {
     onProgress: (percent) => loadingScreen.setProgress(percent),
@@ -66,9 +74,9 @@ function main(): void {
   });
   viewer.addFrameListener(() => measureTool.update());
 
-  // HD quality toggle (bottom-right). Defaults ON; flips the viewer between
-  // full desktop fidelity and the SDK's native mobile profile on the fly.
-  installQualityToggle((hd) => viewer.setHighQuality(hd), viewer.getHighQuality());
+  // HD quality toggle (bottom-right). Defaults ON; persists the choice and
+  // reloads so the SDK re-initializes with the chosen device profile.
+  installQualityToggle();
 
   // Mobile: single left movement stick; look = touch-drag on the canvas.
   const joystick = installJoysticks(viewer.controls);

@@ -29,21 +29,19 @@ export interface ViewerEvents {
 export type CameraMode = 'first-person' | 'pivot';
 
 /**
- * Quality profiles for the HD toggle.
+ * Quality profiles applied to the Three.js renderer + LCC renderer handle.
  *
- * The LCC SDK auto-detects the device and, on phones / weaker GPUs, throttles
- * three things that make captures look noticeably worse than desktop:
- *   - total splat budget (`maxLoadSplatCount`): as low as 1M vs. 3M desktop,
- *   - per-LOD-node splat budget (`LodLevelUpSpatsInNode` via setMaxNodeSplats):
- *     dropped to ~0.5M on mobile,
- *   - and we additionally cap the WebGL backbuffer via the Three.js pixel
- *     ratio.
+ * These cover the knobs reachable *after* load: the WebGL backbuffer scale
+ * (pixel ratio) and the SDK's splat budgets. They are NOT the whole story —
+ * the dominant mobile quality killer is the SDK's per-device LOD-distance cap
+ * (MaxLodDistance 200 -> 30), which has no runtime setter and is decided from
+ * the device profile at startup. That lever lives in ../quality.ts, applied
+ * before load. These profiles complement it.
  *
- * `hd` forces full desktop thresholds regardless of device (real captures sit
- * well under the splat ceilings, so in practice it means "load everything").
- * `performance` mirrors the SDK's native mobile tuning for older phones that
- * can't sustain full fidelity. Both apply live — no reload — because every
- * underlying setter flags the SDK config dirty and re-evaluates immediately.
+ * `lodAutoLevelUp` maps to the SDK's `useLodAutoOptimization`. Verified in the
+ * bundle: when the scene is under the splat budget it *raises* LOD detail up to
+ * the screen-space-error cap — i.e. ON = more detail. Hence ON for HD, OFF for
+ * performance (don't spend the budget chasing detail on weak devices).
  */
 interface QualityProfile {
   /** Three.js renderer pixel ratio = WebGL backbuffer scale. */
@@ -176,8 +174,9 @@ export class Viewer {
         useLoadingEffect: false,
         modelMatrix,
         appKey: XGRIDS_APP_KEY,
-        // Override the SDK's per-device splat throttle from the first byte.
-        maxLoadSplatCount: QUALITY_PROFILES.hd.maxLoadSplatCount,
+        // Override the SDK's per-device splat throttle from the first byte,
+        // honoring the active profile (set by main before load()).
+        maxLoadSplatCount: this.profile().maxLoadSplatCount,
       },
       () => {
         // The SDK applies its mobile downgrade during device detection, which
@@ -201,20 +200,27 @@ export class Viewer {
   }
 
   /**
-   * Switch between the HD (full desktop fidelity) and performance (SDK native
-   * mobile) quality profiles on the fly — no reload. Safe to call before the
-   * model has loaded; the splat/LOD setters are simply skipped until then and
-   * re-applied from the load callback.
+   * Select the HD or performance profile. Applies the pixel-ratio and splat
+   * budgets immediately (these are genuinely live), but note the SDK's
+   * LOD-distance profile is fixed at startup from the device probe — switching
+   * that requires a reload (see ../quality.ts and installQualityToggle). main
+   * calls this once with the persisted preference before load(); it is safe to
+   * call before the model exists (the splat/LOD setters are then re-applied
+   * from the load callback).
    */
   setHighQuality(enabled: boolean): void {
     this.highQuality = enabled;
     this.applyQuality();
   }
 
-  private applyQuality(): void {
-    const profile = this.highQuality
+  private profile(): QualityProfile {
+    return this.highQuality
       ? QUALITY_PROFILES.hd
       : QUALITY_PROFILES.performance;
+  }
+
+  private applyQuality(): void {
+    const profile = this.profile();
 
     // Resize the WebGL backbuffer to the profile's pixel ratio. setSize must
     // follow setPixelRatio for the new ratio to take effect.
