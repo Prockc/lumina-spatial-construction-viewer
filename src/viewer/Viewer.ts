@@ -2,6 +2,7 @@ import {
   Clock,
   Matrix4,
   PerspectiveCamera,
+  Quaternion,
   Scene,
   Vector3,
   WebGLRenderer,
@@ -100,6 +101,11 @@ export class Viewer {
   /** HD toggle state. Defaults ON so the viewer opens at full fidelity. */
   private highQuality = true;
 
+  /** Starting view, captured at construction, for the Reset button. */
+  private readonly initialPosition = new Vector3();
+  private readonly initialQuaternion = new Quaternion();
+  private readonly initialTarget = new Vector3();
+
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({
       canvas,
@@ -128,6 +134,11 @@ export class Viewer {
     );
     this.camera.position.set(0, 1.7, 0); // eye height for a walkthrough start
     this.camera.lookAt(new Vector3(0, 1.7, -1));
+
+    // Snapshot the starting view so the Reset button can return to it exactly.
+    this.initialPosition.copy(this.camera.position);
+    this.initialQuaternion.copy(this.camera.quaternion);
+    this.initialTarget.set(0, 1.7, -1);
 
     this.controls = new FirstPersonController(this.camera, canvas);
     this.controls.collisionGuard = this.collisionGuard;
@@ -197,6 +208,23 @@ export class Viewer {
 
   getHighQuality(): boolean {
     return this.highQuality;
+  }
+
+  /**
+   * Snap the camera (and, in pivot mode, the orbit focus) back to the exact
+   * starting view captured at construction.
+   */
+  resetView(): void {
+    this.camera.position.copy(this.initialPosition);
+    this.camera.quaternion.copy(this.initialQuaternion);
+
+    if (this.mode === 'pivot') {
+      this.orbit.target.copy(this.initialTarget);
+      this.orbit.update();
+    } else {
+      // Re-derive the first-person controller's yaw/pitch from the camera.
+      this.controls.syncFromCamera();
+    }
   }
 
   /**

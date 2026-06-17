@@ -373,7 +373,8 @@ body.lumina-touch #lumina-hint {
   bottom: calc(16px + env(safe-area-inset-bottom));
   z-index: 700;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 8px;
 }
 
@@ -411,6 +412,18 @@ body.lumina-touch #lumina-hint {
   box-shadow:
     0 0 14px var(--lumina-brand-soft),
     inset 0 0 10px rgba(219, 20, 107, 0.18);
+}
+
+/* Solid variant: filled brand pink with white text (Reset button). */
+.lumina-pill-btn--solid {
+  color: #fff;
+  background: var(--lumina-brand);
+  border-color: var(--lumina-brand);
+  box-shadow: 0 0 14px var(--lumina-brand-soft);
+}
+
+.lumina-pill-btn--solid:active {
+  transform: scale(0.94);
 }
 
 /* ------------------------------------------------------------------ */

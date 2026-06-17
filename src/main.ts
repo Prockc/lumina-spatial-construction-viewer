@@ -1,13 +1,12 @@
-// First import: applies the HD desktop-profile override before the LCC SDK
-// module is evaluated (see bootstrapQuality.ts / quality.ts).
-import './bootstrapQuality';
+// The HD desktop-profile override (navigator.userAgent spoof) runs even
+// earlier, as an inline <head> script in index.html, before this bundle loads.
 import './style.css';
 import { Amplify } from 'aws-amplify';
 import { installBrandGuard } from './ui/brandGuard';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { installJoysticks } from './ui/joystick';
 import { installToolbar } from './ui/toolbar';
-import { installQualityToggle } from './ui/qualityToggle';
+import { installBottomControls } from './ui/bottomControls';
 import { MeasureTool } from './tools/MeasureTool';
 import { Viewer } from './viewer/Viewer';
 import { resolveModelUrl } from './config';
@@ -74,9 +73,8 @@ function main(): void {
   });
   viewer.addFrameListener(() => measureTool.update());
 
-  // HD quality toggle (bottom-right). Defaults ON; persists the choice and
-  // reloads so the SDK re-initializes with the chosen device profile.
-  installQualityToggle();
+  // Bottom-right dock: camera Reset (top) + HD quality toggle (bottom).
+  installBottomControls({ onReset: () => viewer.resetView() });
 
   // Mobile: single left movement stick; look = touch-drag on the canvas.
   const joystick = installJoysticks(viewer.controls);

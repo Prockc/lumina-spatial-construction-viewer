@@ -16,6 +16,48 @@
     <meta name="apple-mobile-web-app-title" content="Lumina Spatial .ios Viewer" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Lumina Spatial .ios Viewer</title>
+    <!--
+      HD device-profile override. The XGrids LCC SDK classifies the device from
+      navigator.userAgent; an Android/iOS UA forces coarse mobile LODs
+      (MaxLodDistance 200 -> 30) that make captures look blurry. To get desktop
+      fidelity we present a desktop UA *before the SDK loads*. This MUST be a
+      classic inline <head> script: it runs before the deferred module bundle
+      (so the SDK never sees the real UA) and lets us fall back from the
+      navigator instance to its prototype on browsers (e.g. iOS Safari) that
+      refuse to redefine the instance property. Mirrors src/quality.ts.
+    -->
+    <script>
+      (function () {
+        try {
+          // HD defaults ON; only skip the override when explicitly disabled.
+          if (localStorage.getItem('lumina:hd-quality') === '0') return;
+        } catch (e) {
+          /* storage blocked — proceed with the override */
+        }
+        var DESKTOP_UA =
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+        function spoof(target) {
+          try {
+            Object.defineProperty(target, 'userAgent', {
+              get: function () {
+                return DESKTOP_UA;
+              },
+              configurable: true,
+            });
+          } catch (e) {
+            /* property locked on this target; caller tries the next one */
+          }
+        }
+        spoof(navigator);
+        if (navigator.userAgent !== DESKTOP_UA) {
+          spoof(Object.getPrototypeOf(navigator));
+        }
+        if (navigator.userAgent !== DESKTOP_UA && window.Navigator) {
+          spoof(window.Navigator.prototype);
+        }
+      })();
+    </script>
     <style>
       /* Critical white-label overrides: inlined in <head> so they apply
          before any SDK script can paint a frame. Belt-and-braces with the
