@@ -12,10 +12,7 @@ export class LoadingScreen {
     this.root = document.createElement('div');
     this.root.id = 'lumina-loader';
     this.root.innerHTML = `
-      <div class="lumina-loader__wordmark">
-        <div class="lumina-loader__title">Lumina<em>Spatial</em></div>
-        <div class="lumina-loader__subtitle">Construction Viewer</div>
-      </div>
+      <img class="lumina-loader__logo" src="/logo.png" alt="Lumina Spatial" />
       <div class="lumina-loader__ring" role="progressbar" aria-label="Loading model"></div>
       <div class="lumina-loader__bar"><div class="lumina-loader__bar-fill"></div></div>
       <div class="lumina-loader__status"></div>

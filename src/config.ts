@@ -1,5 +1,5 @@
 /**
- * Central configuration for the Lumina Spatial Construction Viewer.
+ * Central configuration for the Lumina Spatial .ios Viewer.
  *
  * Deployment values come from Vite env vars (set them in the Amplify console
  * under App settings > Environment variables, or in a local `.env` file):

@@ -8,8 +8,8 @@ import type { FirstPersonController } from '../viewer/FirstPersonController';
  *    (handled by FirstPersonController's pointer events)
  *
  * The previous right-hand look stick was removed deliberately to keep the
- * screen uncluttered. The stick is tinted with the Lumina brand color
- * (#DB146B) via CSS and only appears on touch devices (body.lumina-touch).
+ * screen uncluttered. The stick is tinted semi-transparent white via CSS (to
+ * match our other viewer) and only appears on touch devices (body.lumina-touch).
  */
 export interface JoystickHandle {
   /** Show/hide the movement stick (hidden while pivot mode is active). */

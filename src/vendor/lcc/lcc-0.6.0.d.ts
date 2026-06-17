@@ -2,7 +2,7 @@
  * Type surface for the XGrids LCC-Web-SDK (v0.6.0).
  * The SDK ships as a prebuilt ES module with no published typings, so this
  * sibling declaration covers only the API used by the
- * Lumina Spatial Construction Viewer.
+ * Lumina Spatial .ios Viewer.
  *
  * Verified against the bundle:
  *  - The exported `LCCRender` facade exposes load/update/raycast/
@@ -101,6 +101,14 @@ export interface LCCObject {
   ): LCCPoint | null;
   /** True once the capture's collision mesh is loaded and ready. */
   hasCollision?(): boolean;
+  /**
+   * Live splat budget. Writable: assigning re-applies the cap at runtime
+   * (the SDK logs "set max splats: N" and flags the config dirty), which is
+   * how we undo the SDK's automatic mobile/low-GPU downgrade after load.
+   */
+  maxLoadSplatCount?: number;
+  /** Toggle the SDK's LOD auto-optimization (higher detail when stationary). */
+  setLodAutoLevelUp?(enabled: boolean): void;
   dispose?(): void;
 }
 

@@ -28,6 +28,16 @@ export interface ViewerEvents {
  */
 export type CameraMode = 'first-person' | 'pivot';
 
+/**
+ * Splat budget override. The LCC SDK auto-detects the device and, on phones
+ * (and weaker GPUs), throttles the loaded splat count hard — as low as 1M,
+ * versus a 3M desktop default — which is what makes captures look noticeably
+ * worse on mobile. We lift the ceiling so the full capture streams in on every
+ * device; real construction captures sit well under this, so in practice it
+ * means "load everything, no mobile downgrade."
+ */
+const MAX_LOAD_SPLAT_COUNT = 16_000_000;
+
 /** Keep-out distance between the camera and collision geometry (meters). */
 const COLLISION_BUFFER = 0.35;
 const PICK_MAX_DISTANCE = 1000;
@@ -69,9 +79,10 @@ export class Viewer {
       alpha: false,
       stencil: false,
     });
-    // Cap DPR: rendering at 3x on modern phones triples fill-rate for
-    // imperceptible gains with splats.
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Render at the device's native resolution. The previous 2x DPR cap
+    // visibly softened the model on high-density phone screens; honoring the
+    // full devicePixelRatio is the single biggest mobile fidelity win.
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setClearColor(0x0e0e12);
 
@@ -129,8 +140,24 @@ export class Viewer {
         useLoadingEffect: false,
         modelMatrix,
         appKey: XGRIDS_APP_KEY,
+        // Override the SDK's per-device splat throttle (see constant above).
+        maxLoadSplatCount: MAX_LOAD_SPLAT_COUNT,
       },
-      () => events.onLoaded(),
+      () => {
+        // The SDK applies its mobile downgrade during device detection, which
+        // can clobber the load-time ceiling. Re-assert it (and enable LOD
+        // auto-optimization) once the renderer is live so mobile renders at
+        // full fidelity. Both are defensive: older SDK builds may omit them.
+        if (this.model) {
+          try {
+            this.model.maxLoadSplatCount = MAX_LOAD_SPLAT_COUNT;
+          } catch {
+            /* read-only on this SDK build — load-time option still applies */
+          }
+          this.model.setLodAutoLevelUp?.(true);
+        }
+        events.onLoaded();
+      },
       (percent) => events.onProgress(percent),
       (error) => events.onError(error),
     );

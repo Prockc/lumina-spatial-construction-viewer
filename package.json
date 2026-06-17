@@ -1,8 +1,8 @@
 {
-  "name": "lumina-spatial-construction-viewer",
+  "name": "lumina-spatial-ios-viewer",
   "private": true,
   "version": "1.0.0",
-  "description": "Lumina Spatial Construction Viewer - white-labeled 3D Gaussian Splatting (.lcc2) streaming viewer",
+  "description": "Lumina Spatial .ios Viewer - white-labeled 3D Gaussian Splatting (.lcc2) streaming viewer",
   "type": "module",
   "scripts": {
     "dev": "vite",

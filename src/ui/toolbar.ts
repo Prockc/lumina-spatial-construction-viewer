@@ -13,6 +13,8 @@ export interface ToolbarHandle {
 }
 
 const ICONS: Record<string, string> = {
+  // Measure FAB toggle: ruler (same family as the distance sub-tool)
+  measure: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="9.5" width="17.6" height="5" rx="1" transform="rotate(-45 12 12)"/><path d="M9.2 11.6l1.4 1.4M12 8.8l1.4 1.4M14.8 6l1.4 1.4"/></svg>`,
   // First-person: eye
   fp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.6"/></svg>`,
   // Pivot: orbit ring around a point
@@ -39,15 +41,33 @@ export function installToolbar(callbacks: ToolbarCallbacks): ToolbarHandle {
   const pivotBtn = button('pivot', 'Pivot view');
   cameraGroup.append(fpBtn, pivotBtn);
 
-  const measureGroup = group('Measure');
+  // Measurement tools live in a collapsible FAB: a single ruler button that
+  // expands into the distance / area / clear sub-tools.
+  const measureFab = document.createElement('div');
+  measureFab.id = 'lumina-measure-fab';
+  measureFab.className = 'lumina-fab';
+
+  const measureTools = document.createElement('div');
+  measureTools.className = 'lumina-fab__tools';
   const distanceBtn = button('distance', 'Measure distance');
   const areaBtn = button('area', 'Measure area');
   const clearBtn = button('clear', 'Clear measurements');
   clearBtn.disabled = true;
-  measureGroup.append(distanceBtn, areaBtn, clearBtn);
+  measureTools.append(distanceBtn, areaBtn, clearBtn);
 
-  root.append(cameraGroup, measureGroup);
+  const measureMainBtn = button('measure', 'Measurement tools');
+  measureMainBtn.classList.add('lumina-fab__main');
+  measureMainBtn.setAttribute('aria-expanded', 'false');
+
+  measureFab.append(measureTools, measureMainBtn);
+
+  root.append(cameraGroup, measureFab);
   document.body.appendChild(root);
+
+  measureMainBtn.addEventListener('click', () => {
+    const expanded = measureFab.classList.toggle('lumina-fab--expanded');
+    measureMainBtn.setAttribute('aria-expanded', String(expanded));
+  });
 
   const toast = document.createElement('div');
   toast.id = 'lumina-toast';
@@ -87,6 +107,8 @@ export function installToolbar(callbacks: ToolbarCallbacks): ToolbarHandle {
     measureMode = measureMode === mode ? null : mode;
     distanceBtn.classList.toggle('active', measureMode === 'distance');
     areaBtn.classList.toggle('active', measureMode === 'area');
+    // Light up the collapsed FAB button while a tool is armed.
+    measureMainBtn.classList.toggle('active', measureMode !== null);
     callbacks.onMeasureMode(measureMode);
     if (measureMode === 'distance') {
       showToast('Tap the model to place points along a path');
